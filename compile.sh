@@ -1,17 +1,29 @@
 #!/bin/sh
 
-# Setup the build environment
-git clone --depth=1 https://github.com/akhilnarang/scripts environment
-cd environment && bash setup/android_build_env.sh && cd ..
+# Option on whether to upload the produced build to a file hosting service [Useful for CI builds]
+UPLD=1
+if [ $UPLD = 1 ]; then
+	UPLD_PROV="https://oshi.at"
+    UPLD_PROV2="https://transfer.sh"
+fi
 
-# Clone proton clang from kdrag0n's repo
-git clone --depth=1 https://github.com/kdrag0n/proton-clang proton-clang
+if command -v apt &> /dev/null; then
+    # Setup the build environment
+    git clone --depth=1 https://github.com/akhilnarang/scripts environment
+    cd environment && bash setup/android_build_env.sh && cd ..
+else
+    echo "apt is not present in your system"
+    echo "The needed packages must be installed manually"
+fi
+
+# Clone azure clang from its repo
+git clone --depth=1 https://gitlab.com/Panchajanya1999/azure-clang.git azure-clang
 
 # Clone AnyKernel3
 git clone --depth=1 https://github.com/Couchpotato-sauce/AnyKernel3 AnyKernel3
 
 # Export the PATH variable
-export PATH="$(pwd)/proton-clang/bin:$PATH"
+export PATH="$(pwd)/azure-clang/bin:$PATH"
 
 # Clean up out
 find out -delete
@@ -32,12 +44,6 @@ build_clang() {
     OBJDUMP="ccache llvm-objdump"\
     OBJSIZE="ccache llvm-size" \
     READELF="ccache llvm-readelf" \
-    HOSTCC="ccache clang" \
-    HOSTCXX="ccache clang++" \
-    HOSTAR="ccache llvm-ar" \
-    HOSTAS="ccache llvm-as" \
-    HOSTNM="ccache llvm-nm" \
-    HOSTLD="ccache ld.lld" \
 	CROSS_COMPILE=aarch64-linux-gnu- \
 	CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 }
@@ -60,12 +66,13 @@ zip_kernelimage() {
 FILE="$(pwd)/out/arch/arm64/boot/Image.gz-dtb"
 if [ -f "$FILE" ]; then
     zip_kernelimage
-    echo "The kernel has successfully been compiled and can be found in $(pwd)/AnyKernel3/"$KERNEL_NAME".zip"
-    FILE_CI="/drone/src/AnyKernel3/"$KERNEL_NAME".zip"
-    if [ -f "$FILE_CI" ]; then
-        curl --connect-timeout 10 -T "$FILE_CI" https://oshi.at
-        curl --connect-timeout 10 --upload-file "$FILE_CI" https://transfer.sh
-        echo " "
+    KERN_FINAL="$(pwd)/AnyKernel3/"$KERNEL_NAME".zip"
+    echo "The kernel has successfully been compiled and can be found in $KERN_FINAL"
+    if [ "$UPLD" = 1 ]; then
+        for i in "$UPLD_PROV" "$UPLD_PROV2"; do
+            curl --connect-timeout 5 -T "$KERN_FINAL" "$i"
+            echo " "
+        done
     fi
 else
     echo "The kernel has failed to compile. Please check the terminal output for further details."

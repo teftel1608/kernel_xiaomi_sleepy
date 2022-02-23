@@ -1,6 +1,6 @@
 VERSION = 4
 PATCHLEVEL = 9
-SUBLEVEL = 293
+SUBLEVEL = 302
 EXTRAVERSION =
 NAME = Roaring Lionus
 
@@ -855,8 +855,8 @@ endif
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-but-set-variable)
 
 ifeq ($(ld-name),lld)
-KBUILD_LDFLAGS += -O3
-LDFLAGS += -O3
+KBUILD_LDFLAGS += --lto-O3
+LDFLAGS += --lto-O3
 endif
 
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-const-variable)
